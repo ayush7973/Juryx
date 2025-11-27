@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Juryx</title>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 40px auto;
+        }
+        input, select {
+            padding: 10px;
+            width: 100%;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            background: black;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .card {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .api-box {
+            padding: 10px;
+            background: #f3f3f3;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+
+    const API = "http://localhost:8081/api";
+
+    function App() {
+        const [page, setPage] = React.useState("login");
+        const [token, setToken] = React.useState(localStorage.getItem("token"));
+        const [role, setRole] = React.useState(localStorage.getItem("role"));
+        const [message, setMessage] = React.useState("");
+
+
+        React.useEffect(() => {
+            if (token) setPage("dashboard");
+        }, []);
+
+
+        const Register = () => {
+            const [form, setForm] = React.useState({
+                username: "", password: "",
+                fullName: "", email: "", role: "CLIENT"
+            });
+
+            const onSubmit = async () => {
+                try {
+                    const res = await fetch(`${API}/auth/register`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(form)
+                    });
+
+                    if (!res.ok) return setMessage("Registration failed");
+
+                    const data = await res.json();
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("role", data.role);
+
+                    setToken(data.token);
+                    setRole(data.role);
+                    setPage("dashboard");
+                } catch (e) {
+                    setMessage("Server error");
+                }
+            };
+
+            return (
+                <div className="card">
+                    <h2>Register</h2>
+
+                    <input placeholder="Username"
+                        onChange={(e) => setForm({...form, username: e.target.value})} />
+
+                    <input placeholder="Password" type="password"
+                        onChange={(e) => setForm({...form, password: e.target.value})} />
+
+                    <input placeholder="Full Name"
+                        onChange={(e) => setForm({...form, fullName: e.target.value})} />
+
+                    <input placeholder="Email"
+                        onChange={(e) => setForm({...form, email: e.target.value})} />
+
+                    <select onChange={(e) => setForm({...form, role: e.target.value})}>
+                        <option value="CLIENT">Client</option>
+                        <option value="LAWYER">Lawyer</option>
+                        <option value="ADMIN">Admin</option>
+                    </select>
+
+                    <button onClick={onSubmit}>Register</button>
+
+                    <p style={{color: "red"}}>{message}</p>
+
+                    <p>
+                        Already have an account?
+                        <a href="#" onClick={() => setPage("login")}> Login</a>
+                    </p>
+                </div>
+            );
+        };
+
+
+        const Login = () => {
+            const [form, setForm] = React.useState({ username: "", password: "" });
+
+            const onSubmit = async () => {
+                try {
+                    const res = await fetch(`${API}/auth/login`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(form)
+                    });
+
+                    if (!res.ok) return setMessage("Invalid credentials");
+
+                    const data = await res.json();
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("role", data.role);
+
+                    setToken(data.token);
+                    setRole(data.role);
+                    setPage("dashboard");
+                } catch (e) {
+                    setMessage("Server error");
+                }
+            };
+
+            return (
+                <div className="card">
+                    <h2>Login</h2>
+
+                    <input placeholder="Username"
+                        onChange={(e) => setForm({...form, username: e.target.value})} />
+
+                    <input placeholder="Password" type="password"
+                        onChange={(e) => setForm({...form, password: e.target.value})} />
+
+                    <button onClick={onSubmit}>Login</button>
+
+                    <p style={{color: "red"}}>{message}</p>
+
+                    <p>
+                        Don't have an account?
+                        <a href="#" onClick={() => setPage("register")}> Register</a>
+                    </p>
+                </div>
+            );
+        };
+
+
+        const Dashboard = () => {
+            const [cases, setCases] = React.useState([]);
+
+            const loadCases = async () => {
+                const res = await fetch(`${API}/cases/me`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (!res.ok) return setMessage("Failed to load cases");
+
+                const data = await res.json();
+                setCases(data);
+            };
+
+            React.useEffect(() => {
+                loadCases();
+            }, []);
+
+            const logout = () => {
+                localStorage.clear();
+                setToken(null);
+                setPage("login");
+            };
+
+            return (
+                <div className="card">
+                    <h2>Dashboard</h2>
+                    <p>Logged in as: <b>{role}</b></p>
+
+                    <button onClick={logout} style={{background: "red"}}>
+                        Logout
+                    </button>
+
+                    <hr/>
+
+                    <h3>Your Cases</h3>
+
+                    {cases.length === 0 ? (
+                        <p>No cases found</p>
+                    ) : (
+                        cases.map(c => (
+                            <div key={c.id} className="api-box">
+                                <b>{c.caseTitle}</b><br/>
+                                {c.description}<br/>
+                                Status: {c.status}<br/>
+                            </div>
+                        ))
+                    )}
+
+                </div>
+            );
+        };
+
+
+        return (
+            <>
+                {page === "login" && <Login />}
+                {page === "register" && <Register />}
+                {page === "dashboard" && token && <Dashboard />}
+            </>
+        );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+
+</script>
+
+</body>
+</html>
