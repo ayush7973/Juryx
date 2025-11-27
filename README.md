@@ -6,6 +6,7 @@ It includes secure login, user registration, case management, and a clean projec
 
 
 Backend (Spring Boot + JWT)
+___________________________
 
 User Registration & Login
 
@@ -20,7 +21,8 @@ H2 Database
 Secure Password Hashing
 
 
-Frontend (React Single Page UI)
+Frontend 
+________
 
 Register & Login with JWT token
 
